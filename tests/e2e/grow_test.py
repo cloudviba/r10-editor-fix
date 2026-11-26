@@ -1,0 +1,42 @@
+
+import os
+ROOT=os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
+EXT=os.path.join(ROOT,'extension')
+OUT=os.environ.get('R10_SHOTS','/tmp/r10-shots'); os.makedirs(OUT,exist_ok=True)
+exec(open('e2e.py').read().split("with sync_playwright() as p:")[0])
+with sync_playwright() as p:
+    b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox'])
+    page = b.new_page(viewport={'width':1300,'height':800}); errs=[]; page.on('pageerror', lambda e: errs.append(str(e)))
+    page.route('https://www.r10.net/**', lambda r,q: r.fulfill(status=200, content_type='text/html; charset=utf-8', body=page_html(True)))
+    page.goto('https://www.r10.net/newthread.php?do=newthread&f=474'); page.wait_for_selector('.r10me:not([hidden]) .ProseMirror'); page.wait_for_timeout(400)
+    H = lambda: page.eval_on_selector('.r10me-scroll', 'e=>[Math.round(e.getBoundingClientRect().height), e.scrollHeight>e.clientHeight+1]')
+    h0 = H(); print('başlangıç', h0)
+    page.click('.r10me .ProseMirror p >> nth=-1'); page.keyboard.press('Control+End')
+    for i in range(40): page.keyboard.press('Enter'); page.keyboard.type('satır %d' % i)
+    page.wait_for_timeout(200)
+    h1 = H(); print('40 satır sonra', h1)
+    check('kutu içerikle uzadı', h1[0] > h0[0] + 600, (h0, h1))
+    check('iç kaydırma çubuğu yok', h1[1] is False, h1)
+    # imleç görünür mü (sayfa kaydı)
+    caret = page.evaluate("(()=>{const s=window.getSelection(); const r=s.getRangeAt(0).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom), innerHeight]})()")
+    check('imleç ekranda görünüyor', 0 < caret[0] and caret[1] <= caret[2], caret)
+    tb = page.eval_on_selector('.r10me-toolbar', 'e=>Math.round(e.getBoundingClientRect().top)')
+    check('araç çubuğu üstte yapışık', tb <= 2, tb)
+    page.screenshot(path=os.path.join(OUT, 'shot-grow.png'))
+    # silince küçülsün
+    page.keyboard.press('Control+a'); page.keyboard.press('Delete'); page.wait_for_timeout(150)
+    h2 = H(); check('silince minimum yüksekliğe döndü', abs(h2[0] - h0[0]) < 40, (h0, h2))
+    # BBCode sekmesi uzasın
+    page.keyboard.type('x'); 
+    page.evaluate("FroalaEditor.INSTANCES[0].__r10me.setBB(Array.from({length:50},(_, i)=>'bb satır '+i).join('\\n'))")
+    page.click('.r10me-tabs button:has-text("BBCode")'); page.wait_for_timeout(150)
+    sh = page.eval_on_selector('.r10me-source', 'e=>[Math.round(e.getBoundingClientRect().height), e.scrollHeight>e.clientHeight+2]')
+    check('BBCode kutusu uzadı', sh[0] > 900 and not sh[1], sh)
+    page.click('.r10me-tabs button:has-text("Yaz")')
+    # tam ekranda iç kaydırma
+    page.click('.r10me-btn[aria-label="Tam ekran"]'); page.wait_for_timeout(150)
+    fs = page.eval_on_selector('.r10me-scroll', 'e=>[e.scrollHeight>e.clientHeight, getComputedStyle(e).overflowY]')
+    check('tam ekranda iç kaydırma', fs[0] and fs[1]=='auto', fs)
+    check('JS hatası yok', not errs, errs)
+    b.close()
+print('\n' + ('ALL PASS' if not fails else f'{len(fails)} FAIL: {fails}'))

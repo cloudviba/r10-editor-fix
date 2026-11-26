@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "R10 Editör Düzeltici",
+  "version": "1.6.1",
+  "description": "R10.net editörünü düzeltir (yazı boyutu, boşluk ve satır aralıkları korunur) ve isteğe bağlı modern bir editör ekler.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "R10 Editör Düzeltici",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://r10.net/*",
+        "https://*.r10.net/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://r10.net/*",
+        "https://*.r10.net/*"
+      ],
+      "js": [
+        "converter.js",
+        "fixer.js",
+        "modern-editor.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    }
+  ],
+  "minimum_chrome_version": "111",
+  "background": {
+    "service_worker": "spell-sw.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}

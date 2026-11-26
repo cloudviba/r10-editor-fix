@@ -1,0 +1,47 @@
+import fs from 'fs';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { loadModule } = require('hunspell-asm');
+const D = require('turkish-deasciifier'); const deas = new D();
+const { proofread, mask, PROPER } = require('../src/tr-proofread.js');
+const { processBlocks } = require('../src/spell-logic.js');
+const f = await loadModule();
+const h = f.create(f.mountBuffer(fs.readFileSync(new URL('../../extension/dict/tr.aff', import.meta.url)), 'a.aff'), f.mountBuffer(fs.readFileSync(new URL('../../extension/dict/tr.dic', import.meta.url)), 'a.dic'));
+const lookup = async (words) => { const r = {}; for (const it of words) { const ok = h.spell(it.w); const o = { ok }; o.alt = (it.alts||[]).find(a => a !== it.w && h.spell(a)); if (!ok && !o.alt) o.sugg = h.suggest(it.w).slice(0, 8); r[it.w] = o; } return r; };
+const proper = {}; Object.keys(PROPER).forEach(k => proper[k] = 1);
+const deps = { proofread, mask, deasciify: s => deas.deasciify(s), lookup, ignore: { acme: 1 }, proper };
+let fail = 0;
+async function t(inp, exp, expFlags) {
+  const [r] = await processBlocks([inp], deps);
+  const flags = r.flags.map(f => f.w);
+  const ok = r.final === exp && (!expFlags || JSON.stringify(flags) === JSON.stringify(expFlags));
+  if (!ok) { fail++; console.log('FAIL', JSON.stringify(inp), '\n  got :', JSON.stringify(r.final), 'flags', JSON.stringify(r.flags), '\n  exp :', JSON.stringify(exp), JSON.stringify(expFlags || '')); }
+  else console.log('ok  ', JSON.stringify(r.final).slice(0, 90), flags.length ? 'FLAGS ' + JSON.stringify(r.flags.map(f=>f.w+':'+f.sugg.slice(0,3).join('/'))) : '');
+}
+await t('cok guzel bir urun icin tesekkurler', 'Çok güzel bir ürün için teşekkürler');
+await t('siparisiniz onaylandiktan sonra kargoya verilir', 'Siparişiniz onaylandıktan sonra kargoya verilir');
+await t('sirket yoneticisi soyle dedi', 'Şirket yöneticisi şöyle dedi');
+await t('Hesap önceliklidr ve doğrulamsı yapılmış', 'Hesap önceliklidir ve doğrulamsı yapılmış', ['doğrulamsı']);
+await t('kitablarınız okunur', 'Kitaplarınız okunur');
+await t('telefonnu kapatma', 'Telefonnu kapatma', ['Telefonnu']);
+await t('Kitaplarımızdan gelmeyeceklermiş', 'Kitaplarımızdan gelmeyeceklermiş', []);
+await t('Ahmet Bey ve Acme ekibi geldi', 'Ahmet Bey ve Acme ekibi geldi', []);
+await t('acme ile çalışıyoruz', 'Acme ile çalışıyoruz', []);
+await t('alicam yarın', 'Alicam yarın', ['Alicam']);
+await t('Siparişin ödemsi yapıldı', 'Siparişin ödemsi yapıldı');
+await t('Kampanya performansı arttı', 'Kampanya performansı arttı', []);
+await t('Google hesabım güncellendi', 'Google hesabım güncellendi', []);
+await t('herkez yanlız kaldı malesef', 'Herkes yalnız kaldı maalesef', []);
+await t('bu kitabn sayfası yetrli değil', 'Bu kitabn sayfası yetrli değil', ['kitabn','yetrli']);
+await t('Mesaj atmanız yeterli, hızlı dönüş yapılır.', 'Mesaj atmanız yeterli, hızlı dönüş yapılır.', []);
+await t('Toplam tutar en az 1.250 TL olmalı', 'Toplam tutar en az 1.250 TL olmalı', []);
+await t('Hesap aktif olmalı, askıda olmamalı', 'Hesap aktif olmalı, askıda olmamalı', []);
+await t('Kimlik / işletme doğrulaması yapılmış hesaplar önceliklidir', 'Kimlik / işletme doğrulaması yapılmış hesaplar önceliklidir', []);
+await t('Ödeme, hesap incelenip devir tamamlandıktan sonra yapılır', 'Ödeme, hesap incelenip devir tamamlandıktan sonra yapılır', []);
+await t('sik sik geliyor', 'Sık sık geliyor');
+await t('Bu çok şık bir sik', 'Bu çok şık bir sik');
+await t('Ali ve Veli şirkete geldi, Mehmet de geldi', 'Ali ve Veli şirkete geldi, Mehmet de geldi', []);
+await t('Ahmet bey aradı', 'Ahmet bey aradı', []);
+await t('Mustafa Kemal Atatürk', 'Mustafa Kemal Atatürk', []);
+await t('reklam ajansimiz hizmet veriyor', 'Reklam ajansımız hizmet veriyor');
+console.log(fail ? fail + ' FAIL' : 'ALL PASS');
