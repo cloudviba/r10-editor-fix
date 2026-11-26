@@ -4,6 +4,10 @@ R10.net için Chrome eklentisi (Manifest V3). R10 editörünün **Önizle / Konu
 
 > Sürüm: **1.6.1** · Chrome 111+ · Yalnızca `r10.net` üzerinde çalışır
 
+> 💻 **Tamamen yerel (local) çalışır:** harici sunucu, analiz veya izleme kullanmaz; yazdığın metin hiçbir yere gönderilmez. Ayrıntılar: [Gizlilik ve ağ erişimi](#gizlilik-ve-ağ-erişimi).
+>
+> 🛠️ Bu eklenti bir **hobi projesi** olarak geliştirilmiştir.
+
 <p align="center">
   <img src="docs/screenshots/full.png" width="49%">
   <img src="docs/screenshots/spell-panel.png" width="49%">
