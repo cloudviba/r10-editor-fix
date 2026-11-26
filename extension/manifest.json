@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "R10 Editör Düzeltici",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "R10.net editörünü düzeltir (yazı boyutu, boşluk ve satır aralıkları korunur) ve isteğe bağlı modern bir editör ekler.",
   "icons": {
     "16": "icons/icon16.png",

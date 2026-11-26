@@ -1,6 +1,6 @@
 {
   "name": "r10-editor-fix-build",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "R10 Editör Düzeltici – modern editör ve yazım denetimi derleme kaynakları",
   "scripts": {
     "build": "node build.mjs && node build-sw.mjs",

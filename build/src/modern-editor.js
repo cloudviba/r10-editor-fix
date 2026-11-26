@@ -99,7 +99,10 @@ import Deasciifier from 'turkish-deasciifier';
   function setMode(m) { try { localStorage.setItem(MODE_KEY, m); } catch (e) {} }
   function draftKey() {
     var q = new URLSearchParams(location.search);
-    var id = ['do', 'f', 't', 'p'].map(function (k) { return q.get(k) ? k + '=' + q.get(k) : ''; }).filter(Boolean).join('&');
+    var id = ['do', 'f', 't', 'p', 'pmid'].map(function (k) { return q.get(k) ? k + '=' + q.get(k) : ''; }).filter(Boolean).join('&');
+    // R10 özel mesajları: konuşmalar AJAX ile değişir, adres değişmez
+    var pm = document.querySelector('.privateMessages .privateMessage[data-pmid]');
+    if (pm && pm.getAttribute('data-pmid')) id = (id ? id + '&' : '') + 'conv=' + pm.getAttribute('data-pmid');
     return DRAFT_PREFIX + location.pathname + (id ? '?' + id : '');
   }
   function stickyTop() {
@@ -621,9 +624,13 @@ import Deasciifier from 'turkish-deasciifier';
     this.view = 'write';
     this.dark = isDark();
     this.form = fr.$oel[0].form;
+    // R10 özel mesaj ekranı: sabit yükseklikli sohbet düzeni
+    this.compact = !!(fr.$box && fr.$box[0] && fr.$box[0].closest && fr.$box[0].closest('.privateMessages'));
     this.buildDOM();
     this.buildEditor();
     this.bindGlobal();
+    this.hookFroala();
+    if (this.compact) this.bindCompactLayout();
   }
 
   ModernEditor.prototype.buildDOM = function () {
@@ -673,7 +680,8 @@ import Deasciifier from 'turkish-deasciifier';
     new MutationObserver(function () { detach(self.root); detach(self.switchEl); }).observe(this.root, { childList: true, subtree: true });
     detach(this.root); detach(this.switchEl);
 
-    var minH = Math.max(320, (this.fr.opts && this.fr.opts.heightMin) || 0);
+    if (this.compact) { this.root.classList.add('is-compact'); this.switchEl.classList.add('is-compact'); }
+    var minH = this.compact ? 96 : Math.max(320, (this.fr.opts && this.fr.opts.heightMin) || 0);
     this.scroll.style.minHeight = minH + 'px';
     this.applyTheme();
   };
@@ -704,7 +712,77 @@ import Deasciifier from 'turkish-deasciifier';
   ModernEditor.prototype.fitSource = function () {
     if (this.source.hidden || this.root.classList.contains('is-full')) { this.source.style.height = ''; return; }
     this.source.style.height = 'auto';
-    this.source.style.height = Math.max(this.source.scrollHeight + 2, 320) + 'px';
+    this.source.style.height = Math.max(this.source.scrollHeight + 2, this.compact ? 96 : 320) + 'px';
+  };
+
+  // Özel mesaj ekranı: R10 sohbet alanının yüksekliğini editör yüksekliğine göre
+  // hesaplıyor (pmHeight). Editör boyu değiştikçe yeniden hesaplat.
+  ModernEditor.prototype.bindCompactLayout = function () {
+    var self = this, raf = 0, last = -1;
+    var relayout = function () {
+      if (raf) return;
+      raf = requestAnimationFrame(function () {
+        raf = 0;
+        var host = self.root.closest('.editor') || self.root.parentNode;
+        var hgt = host ? host.offsetHeight : 0;
+        if (hgt === last) return;
+        last = hgt;
+        try { if (typeof window.pmHeight === 'function') window.pmHeight(); } catch (e) {}
+      });
+    };
+    this.relayout = relayout;
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(relayout);
+      ro.observe(this.root); ro.observe(this.switchEl);
+      try { ro.observe(this.fr.$box[0]); } catch (e) {}
+    }
+  };
+
+  // R10'un kendi kodu gizli Froala'ya doğrudan yazdığında (konuşma değişimi,
+  // gönderim sonrası temizleme, alıntı ekleme) modern editör de güncellensin.
+  ModernEditor.prototype.hookFroala = function () {
+    var self = this, fr = this.fr;
+    if (!fr.html || fr.__r10meHooked) return;
+    fr.__r10meHooked = true;
+    var origSet = fr.html.set, origInsert = fr.html.insert;
+    if (typeof origSet === 'function') {
+      fr.html.set = function () {
+        var r = origSet.apply(this, arguments);
+        if (!self._writing && self.active) { try { self.onExternalSet(arguments[0]); } catch (e) {} }
+        return r;
+      };
+    }
+    if (typeof origInsert === 'function') {
+      fr.html.insert = function () {
+        if (!self._writing && self.active) {
+          try { self.onExternalInsert(arguments[0]); return; } catch (e) {}
+        }
+        return origInsert.apply(this, arguments);
+      };
+    }
+  };
+
+  ModernEditor.prototype.onExternalSet = function (html) {
+    var bb = window.R10BB.htmlToBB(String(html || ''));
+    if (bb !== this.getBB()) { this.setBB(bb); closePop(); }
+    this.syncedBB = bb;
+    this.banner.hidden = true;
+    if (!bb.trim()) {
+      // gönderimden hemen sonra boşaltıldıysa gönderilen taslağı sil
+      if (this.pendingSent && Date.now() - this.pendingSent.t < 60000) {
+        try { localStorage.removeItem(this.pendingSent.key); } catch (e) {}
+      }
+      this.pendingSent = null;
+      var self = this;
+      setTimeout(function () { if (self.active) self.checkDraft(); }, 60);
+    }
+  };
+
+  ModernEditor.prototype.onExternalInsert = function (html) {
+    var bb = window.R10BB.htmlToBB(String(html || ''));
+    if (!bb) return;
+    this.insertBBAtCursor(bb);
+    this.onChange();
   };
 
   ModernEditor.prototype.buildEditor = function () {
@@ -2078,7 +2156,8 @@ import Deasciifier from 'turkish-deasciifier';
         if (ta) { ta.val(bb); return; }
       }
     } catch (e) {}
-    fr.html.set(window.R10BB.bbToHTML(bb));
+    this._writing = true;
+    try { fr.html.set(window.R10BB.bbToHTML(bb)); } finally { this._writing = false; }
     try { fr.undo.saveStep(); } catch (e) {}
   };
 
@@ -2153,6 +2232,7 @@ import Deasciifier from 'turkish-deasciifier';
     this.refreshToolbar();
     if (user) { setMode('modern'); this.editor.commands.focus('end'); }
     this.checkDraft();
+    if (this.relayout) this.relayout();
   };
 
   ModernEditor.prototype.deactivate = function (user) {
@@ -2169,6 +2249,7 @@ import Deasciifier from 'turkish-deasciifier';
     this.btnModern.classList.remove('is-on');
     if (user) { setMode('r10'); try { this.fr.events.focus(); } catch (e) {} }
     closePop();
+    if (this.relayout) this.relayout();
   };
 
   ModernEditor.prototype.isActive = function () { return this.active && enabled(); };
@@ -2190,6 +2271,13 @@ import Deasciifier from 'turkish-deasciifier';
     window.addEventListener('scroll', function () { if (self.imgBar && !self.imgBar.hidden) self.updateImageBar(); }, { passive: true });
     window.addEventListener('resize', function () { self.updateScrollMargins(); if (self.view === 'source') self.fitSource(); });
     if (this.form) {
+      this.form.addEventListener('click', function (e) {
+        var b = e.target && e.target.closest && e.target.closest('button, input[type="submit"]');
+        if (!b || !self.active || b.closest('.r10me, .r10me-switch')) return;
+        var type = (b.getAttribute('type') || (b.tagName === 'BUTTON' ? 'submit' : '')).toLowerCase();
+        if (type !== 'submit' || /preview/i.test(b.name || '')) return;
+        self.pendingSent = { key: draftKey(), t: Date.now() };
+      }, true);
       this.form.addEventListener('submit', function (e) {
         var s = e.submitter;
         var isPreview = s && /preview/i.test(s.name || '');
@@ -2284,7 +2372,7 @@ import Deasciifier from 'turkish-deasciifier';
   }
 
   window.R10ModernEditor = {
-    version: '1.6.0',
+    version: '1.6.2',
     attachAll: attachAll,
     forFroala: function (fr) { return fr && fr.__r10me; },
     managed: function () { return managed.slice(); }

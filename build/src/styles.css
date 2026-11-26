@@ -382,3 +382,30 @@ textarea.r10me-input { min-height: 120px; resize: vertical; font-family: inherit
 .r10me-gal-item:hover .r10me-gal-del { display: flex; }
 .r10me-gal-del.is-armed { display: flex; background: var(--me-danger); }
 .r10me-gallery .r10me-empty { grid-column: 1 / -1; }
+
+/* Özel mesaj ekranı (sıkı kip): sohbet alanını daraltmasın */
+.r10me-switch.is-compact { margin: 0 0 4px; }
+.r10me-switch.is-compact .r10me-hint { display: none; }
+.r10me.is-compact .r10me-toolbar {
+  position: static; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: 4px 6px; gap: 1px;
+  scrollbar-width: thin; scrollbar-color: var(--me-bg3) transparent;
+}
+.r10me.is-compact .r10me-toolbar::-webkit-scrollbar { height: 6px; }
+.r10me.is-compact .r10me-toolbar > * { flex: 0 0 auto; }
+.r10me.is-compact .r10me-toolbar .r10me-spacer { flex: 1 0 6px; }
+.r10me.is-compact .r10me-btn { height: 28px; min-width: 28px; padding: 0 5px; }
+.r10me.is-compact .r10me-btn svg { width: 16px; height: 16px; }
+.r10me.is-compact .r10me-sep { margin: 0 3px; }
+.r10me.is-compact .r10me-tabs button { padding-top: 3px; padding-bottom: 3px; }
+.r10me.is-compact .r10me-scroll { max-height: 190px; overflow: auto; }
+.r10me.is-compact .r10me-source { min-height: 96px; }
+.r10me.is-compact .ProseMirror { padding: 10px 14px; }
+.r10me.is-compact .r10me-status { display: none; }
+.r10me.is-compact .r10me-banner { padding-top: 5px; padding-bottom: 5px; }
+.r10me.is-compact.is-full .r10me-scroll { max-height: none; }
+.r10me.is-compact.is-full .r10me-status { display: flex; }
+.r10me.is-compact { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.r10me.is-compact .r10me-toolbar { min-width: 0; max-width: 100%; box-sizing: border-box; contain: inline-size; }
+.r10me.is-compact .r10me-btn:has(> svg:not(.r10me-caret)) .r10me-label { display: none; }
+.r10me.is-compact .r10me-btn .r10me-label { max-width: 64px; }
+.r10me.is-compact .r10me-tabs button { padding-left: 7px; padding-right: 7px; }

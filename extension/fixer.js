@@ -43,7 +43,7 @@
       var useModern = !!(me && me.isActive && me.isActive());
       if (!useModern && isBbView(ed)) return; // kullanıcı R10'un BBCode modunda yazıyor
       var oel = ed.$oel[0];
-      var name = oel.name || 'message';
+      var name = oel.getAttribute('data-r10fix-name') || oel.name || 'message';
       var bb;
       try {
         if (useModern) {
@@ -58,16 +58,30 @@
       if (!ta) {
         ta = document.createElement('textarea');
         ta.setAttribute('data-r10fix', name);
-        ta.name = name;
         ta.style.display = 'none';
+      }
+      // Froala alanının ÖNÜNE koy: R10'un AJAX gönderimleri (özel mesaj vb.)
+      // textarea[name=message] ile ilk eşleşen alanı okur.
+      if (oel.parentNode && oel.form === form) {
+        if (ta.nextSibling !== oel) oel.parentNode.insertBefore(ta, oel);
+      } else if (ta.parentNode !== form) {
         form.appendChild(ta);
       }
+      ta.name = name;
       ta.value = bb;
       ta.disabled = false;
 
+      // Aynı adlı diğer alanlar (Froala'nın HTML alanı, R10 BBCode alanı) gönderime
+      // girmesin. Yalnız disabled yetmez: R10 içerik değişince Froala alanının
+      // kilidini kendisi açıyor. Bu yüzden ad geçici olarak kaldırılır.
       var others = [];
-      form.querySelectorAll('textarea').forEach(function (t) {
-        if (t !== ta && t.name === name && !t.disabled) { t.disabled = true; others.push(t); }
+      Array.prototype.forEach.call(form.elements, function (t) {
+        if (t !== ta && t.name === name && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT')) {
+          others.push({ el: t, name: t.name, disabled: t.disabled });
+          t.setAttribute('data-r10fix-name', t.name);
+          t.removeAttribute('name');
+          t.disabled = true;
+        }
       });
       var wys = form.querySelector('input[name="wysiwyg"]');
       var wysOld = wys ? wys.value : null;
@@ -91,8 +105,11 @@
     restoreTimer = setTimeout(function () {
       restoreTimer = null;
       // gönderim verisi senkron alındı; editörü kullanılabilir duruma döndür
-      prepared.splice(0).forEach(function (p) {
-        p.others.forEach(function (t) { t.disabled = false; });
+      // ters sırada: aynı gönderimde iki kez hazırlanırsa ilk kaydedilen (asıl) değerler kalsın
+      prepared.splice(0).reverse().forEach(function (p) {
+        p.others.forEach(function (o) { o.el.name = o.name; o.el.removeAttribute('data-r10fix-name'); o.el.disabled = o.disabled; });
+        // eski BBCode sonraki okumalarda (ör. R10'un AJAX gönderimi) ilk eşleşme olmasın
+        p.ta.removeAttribute('name');
         p.ta.disabled = true;
         if (p.wys && p.wysOld !== null) p.wys.value = p.wysOld;
       });

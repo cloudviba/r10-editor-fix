@@ -2,7 +2,7 @@
 
 R10.net için Chrome eklentisi (Manifest V3). R10 editörünün **Önizle / Konuyu Aç / Cevap Gönder** sırasında yazı boyutlarını, boş satırları ve aralıkları bozmasını kalıcı olarak çözer; üstüne R10'un tüm özelliklerini içeren **modern bir editör**, **görsel boyutlandırma** ve **Türkçe yazım/imla düzeltme** ekler.
 
-> Sürüm: **1.6.1** · Chrome 111+ · Yalnızca `r10.net` üzerinde çalışır
+> Sürüm: **1.6.2** · Chrome 111+ · Yalnızca `r10.net` üzerinde çalışır
 
 > 💻 **Tamamen yerel (local) çalışır:** harici sunucu, analiz veya izleme kullanmaz; yazdığın metin hiçbir yere gönderilmez. Ayrıntılar: [Gizlilik ve ağ erişimi](#gizlilik-ve-ağ-erişimi).
 >
@@ -65,6 +65,7 @@ R10 editörünün üstüne **R10 Editörü / Modern Editör** seçicisi eklenir;
 - Otomatik taslak kaydı, R10 gece/gündüz temasına uyum
 - Yazma alanı içerik kadar uzar; araç çubuğu kaydırırken üstte kalır
 - Boş alana tıklayınca yazmaya devam edilir
+- **Özel mesajlar:** sohbet ekranında sıkı kip (tek satır araç çubuğu, sınırlı yükseklik) ile mesaj geçmişi daralmaz; taslaklar her konuşma için ayrı saklanır
 
 ### 3. R10'un tüm özellikleri
 - **Emojiler:** Rokito ve Genel sekmeleri (R10'un kendi seti) + Unicode emoji; R10 kodlarıyla (`:r1:`, `:)`) gönderilir
@@ -191,6 +192,7 @@ python3 e2e_ext.py        # gerçek eklenti yüklenerek: yazım denetimi servisi
 python3 e2e_r10.py        # R10 özellikleri: emoji, GIF, hazır cevaplar, @etiket, yükleme
 python3 e2e_imgmenu.py    # görsel menüsü, hizalama, bağlantı, galeri
 python3 e2e_autosel.py    # eklenen görselin otomatik seçimi
+python3 e2e_pm.py         # özel mesaj ekranı: AJAX gönderimi, sıkı düzen, taslaklar
 # diğerleri: e2e_img.py, e2e_proof.py, e2e_click.py, grow_test.py, layout_test.py, sw_test.py
 ```
 Ekran görüntüleri `R10_SHOTS` ortam değişkenindeki klasöre (varsayılan `/tmp/r10-shots`) yazılır. Testler Chrome'u `/usr/bin/google-chrome` yolunda arar.
@@ -212,6 +214,7 @@ Eklentinin kendisi tamamen yereldir: kütüphaneler pakete gömülüdür, sözl�
 ## Sürüm geçmişi
 | Sürüm | Değişiklik |
 |---|---|
+| 1.6.2 | Özel mesajlarda mesajın `<p>…</p>` etiketleriyle gitmesi düzeltildi; özel mesaj ekranında sıkı editör düzeni (sohbet alanı daralmıyor); taslaklar konuşma bazında; R10'un alıntı ekleme ve editör temizleme işlemleri modern editöre yansıyor |
 | 1.6.1 | Eklenen görsel otomatik seçili gelir; seçiliyken yazmak/yeni içerik eklemek görseli silmez |
 | 1.6.0 | R10 ile aynı görsel menüsü (Değiştir / Hizala / Bağlantı / Sil), Yüklediklerim galerisi, yazma alanının içerikle uzaması |
 | 1.5.x | R10 emojileri, GIF/Giphy, Hazır Cevaplarım, Markdown, kod türleri, @etiketleme; panel taşma düzeltmeleri |
